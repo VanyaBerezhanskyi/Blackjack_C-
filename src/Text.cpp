@@ -7,27 +7,24 @@ using namespace std;
 
 bool Text::isTTFInitialized = false;
 
-Text::Text(float x, float y, float width, float height, unsigned fontSize, SDL_Color c, string s)
+Text::Text(float x, float y, int width, int height, int fontSize, string text, SDL_Color color)
+	: fontSize{ fontSize }, text{ text }, color{ color }
 {
 	// We defined isTTFInitialized to avoid extra calls to TTF_Init()
 
 	if (!isTTFInitialized && TTF_Init() == -1)
 		cout << "Failed to initialize SDL_ttf\n";
+	else
+		isTTFInitialized = true;
 
-	isTTFInitialized = true;
+	position.x = x;
+	position.y = y;
 
-	xPos = x;
-	yPos = y;
-	destRect.x = xPos;
-	destRect.y = yPos;
+	destRect.x = x;
+	destRect.y = y;
 
 	destRect.w = width;
 	destRect.h = height;
-
-	this->fontSize = fontSize;
-
-	color = c;
-	text = s;
 
 	texture = ResourceManager::getInstance().getTexture("assets/fonts/Marlboro.ttf", fontSize, text, color);
 }
@@ -38,8 +35,8 @@ Text::~Text()
 }
 
 Text::Text(Text&& other) noexcept
-	: xPos{ other.xPos }, yPos{ other.yPos }, destRect{ other.destRect }, texture{ other.texture },
-	color{ other.color }, fontSize{ other.fontSize }, text{ move(other.text) }
+	: text{ move(other.text) }, destRect{ other.destRect }, texture{ other.texture },
+	position{ other.position }, color{ other.color }, fontSize{ other.fontSize }
 {
 	other.texture = nullptr;
 }
@@ -48,13 +45,12 @@ Text& Text::operator=(Text&& other) noexcept
 {
 	if (this != &other)
 	{
-		xPos = other.xPos;
-		yPos = other.yPos;
+		text = move(other.text);
 		destRect = other.destRect;
 		texture = other.texture;
+		position = other.position;
 		color = other.color;
 		fontSize = other.fontSize;
-		text = move(other.text);
 
 		other.texture = nullptr;
 	}
@@ -75,14 +71,15 @@ void Text::setText(const string newText)
 {
 	text = newText;
 
-	SDL_DestroyTexture(texture); // Destroy the old texture before creating a new one
+	// Destroy the old texture before creating a new one
+	SDL_DestroyTexture(texture);
 
 	texture = ResourceManager::getInstance().getTexture("assets/fonts/Marlboro.ttf", fontSize, text, color);
 }
 
-pair<float, float> Text::getPosition() const
+Position Text::getPosition() const
 {
-	return { xPos, yPos };
+	return position;
 }
 
 pair<float, float> Text::getSize() const

@@ -2,20 +2,20 @@
 #include "ResourceManager.h"
 #include "GameManager.h"
 
-Card::Card(float x, float y, float width, float height, string texturePath, int cardValue)
+Card::Card(float x, float y, int width, int height, string texturePath, int cardValue, bool isAce)
+	: cardValue{ cardValue }, isAce{ isAce }
 {
-	xPos = x;
-	yPos = y;
-	destRect.x = xPos;
-	destRect.y = yPos;
+	position.x = x;
+	position.y = y;
+
+	destRect.x = x;
+	destRect.y = y;
 
 	destRect.w = width;
 	destRect.h = height;
 
 	face = ResourceManager::getInstance().getTexture(texturePath.c_str());
 	back = ResourceManager::getInstance().getTexture("assets/textures/cards/cardBack.png");
-
-	this->cardValue = cardValue;
 }
 
 Card::~Card()
@@ -25,8 +25,8 @@ Card::~Card()
 }
 
 Card::Card(Card&& other) noexcept
-	: xPos{ other.xPos }, yPos{ other.yPos }, face{ other.face }, back{ other.back }, destRect{ other.destRect },
-	cardValue{ other.cardValue }, isFaceUp{ other.isFaceUp }
+	: destRect{other.destRect}, face{ other.face }, back{ other.back }, position{ other.position },
+	cardValue{ other.cardValue }, isFaceUp{ other.isFaceUp }, isAce{ other.isAce }
 {
 	other.face = nullptr;
 	other.back = nullptr;
@@ -36,13 +36,13 @@ Card& Card::operator=(Card&& other) noexcept
 {
 	if (this != &other)
 	{
-		xPos = other.xPos;
-		yPos = other.yPos;
+		destRect = other.destRect;
 		face = other.face;
 		back = other.back;
-		destRect = other.destRect;
+		position = other.position;
 		cardValue = other.cardValue;
 		isFaceUp = other.isFaceUp;
+		isAce = other.isAce;
 
 		other.face = nullptr;
 		other.back = nullptr;
@@ -55,28 +55,30 @@ void Card::update()
 {
 	// Moving our card to the target position
 
-	const float moveSpeed{ 1 };
-	const float e{ 0.5f }; // Here we account the error because of peculiarities of floating-point numbers
+	const float moveSpeed{ 1.5f };
 
-	if (fabs(destRect.x - xPos) > e || fabs(destRect.y - yPos) > e)
+	// Here we account the error because of peculiarities of floating-point numbers
+	const float error{ 1.0f };
+
+	if (fabs(destRect.x - position.x) > error || fabs(destRect.y - position.y) > error)
 	{
-		float dx = fabs(destRect.x - xPos); 
-		float dy = fabs(destRect.y - yPos);
+		float dx = fabs(destRect.x - position.x);
+		float dy = fabs(destRect.y - position.y);
 
 		float distance = sqrt(dx * dx + dy * dy);
 
-		// Projections of speed by x and y directions
+		// Projections of the speed by x and y directions
 		float speedX = moveSpeed * (dx / distance);
 		float speedY = moveSpeed * (dy / distance);
 
-		if (xPos < destRect.x)
+		if (position.x < destRect.x)
 			destRect.x -= speedX;
-		else if (xPos > destRect.x)
+		else if (position.x > destRect.x)
 			destRect.x += speedX;
 
-		if (yPos < destRect.y)
+		if (position.y < destRect.y)
 			destRect.y -= speedY;
-		else if (yPos > destRect.y)
+		else if (position.y > destRect.y)
 			destRect.y += speedY;
 	}
 }
@@ -91,6 +93,16 @@ void Card::render()
 
 void Card::setPosition(const float x, const float y)
 {
-	xPos = x;
-	yPos = y;
+	position.x = x;
+	position.y = y;
+}
+
+int Card::getValue() const
+{
+	const int maxValue{ 11 };
+
+	if (isAce)
+		return maxValue; // By default an ace has 11
+
+	return cardValue;
 }

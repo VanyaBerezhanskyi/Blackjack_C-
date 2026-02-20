@@ -5,11 +5,17 @@
 
 using namespace std;
 
+struct Position
+{
+	float x{};
+	float y{};
+};
+
 class Card
 {
 public:
 	Card() = default;
-	Card(float x, float y, float width, float height, string texturePath, int cardValue);
+	Card(float x, float y, int width, int height, string texturePath, int cardValue, bool isAce);
 	~Card();
 	
 	Card(const Card&) = default;
@@ -23,9 +29,12 @@ public:
 
 	void setPosition(const float x, const float y);
 
-	int getValue() const { return cardValue; };
+	int getValue() const;
 
 	void flip() { isFaceUp = !isFaceUp; }
+	bool faceUp() { return isFaceUp; }
+
+	bool ace() { return isAce; }
 
 private:
 	SDL_FRect destRect{};
@@ -33,11 +42,10 @@ private:
 	SDL_Texture* face{ nullptr };
 	SDL_Texture* back{ nullptr };
 
-	float xPos{};
-	float yPos{};
+	Position position{};
 
 	int cardValue{};
 
 	bool isFaceUp{ false };
-
+	bool isAce{ false };
 };

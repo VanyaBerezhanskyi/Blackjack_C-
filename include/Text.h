@@ -5,11 +5,17 @@
 
 using namespace std;
 
+struct Position
+{
+	float x{};
+	float y{};
+};
+
 class Text
 {
 public:
 	Text() = default;
-	Text(float x, float y, float width, float height, unsigned fontSize, SDL_Color c, string s);
+	Text(float x, float y, int width, int height, int fontSize, string text, SDL_Color color);
 	~Text();
 
 	Text(const Text&) = default;
@@ -23,7 +29,7 @@ public:
 
 	void setText(const string newText);
 
-	pair<float, float> getPosition() const;
+	Position getPosition() const;
 	pair<float, float> getSize() const;
 
 private:
@@ -33,12 +39,11 @@ private:
 
 	SDL_Texture* texture{ nullptr };
 
+	Position position{};
+
 	SDL_Color color{};
 
-	float xPos{};
-	float yPos{};
-
-	unsigned fontSize{};
+	int fontSize{};
 
 	static bool isTTFInitialized;
 };

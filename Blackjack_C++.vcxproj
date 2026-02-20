@@ -140,6 +140,7 @@
     <ClCompile Include="src\GameManager.cpp" />
     <ClCompile Include="src\Card.cpp" />
     <ClCompile Include="src\glad.c" />
+    <ClCompile Include="src\Hand.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\ResourceManager.cpp" />
     <ClCompile Include="src\Text.cpp" />
@@ -148,6 +149,7 @@
   <ItemGroup>
     <ClInclude Include="include\GameManager.h" />
     <ClInclude Include="include\Card.h" />
+    <ClInclude Include="include\Hand.h" />
     <ClInclude Include="include\ResourceManager.h" />
     <ClInclude Include="include\Text.h" />
     <ClInclude Include="include\UIManager.h" />

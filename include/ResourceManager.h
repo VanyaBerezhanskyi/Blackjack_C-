@@ -1,7 +1,7 @@
 #pragma once
 
-#include <unordered_map>
 #include <string>
+#include <unordered_map>
 #include <SDL.h>
 #include <SDL_ttf.h>
 
@@ -13,11 +13,16 @@ class ResourceManager
 public:
 	static ResourceManager& getInstance();
 
-	SDL_Texture* getTexture(const char* filePath);													// For images
-	SDL_Texture* getTexture(const char* filePath, unsigned fontSize, string text, SDL_Color color); // For fonts
+	// For images
+	SDL_Texture* getTexture(const char* texturePath);		
+
+	// For fonts
+	SDL_Texture* getTexture(const char* texturePath, const int fontSize, const string text, const SDL_Color color);
 
 private:
-	ResourceManager() = default; // We don't want to create an instance of ResourceManager
+	// We don't want to create an instance of ResourceManager
+	ResourceManager() = default;
 
-	unordered_map<string, SDL_Texture*> textures; // We use this map to not load the same texture multiple times
+	// We use this map to not load the same texture multiple times
+	unordered_map<string, SDL_Texture*> textures;
 };

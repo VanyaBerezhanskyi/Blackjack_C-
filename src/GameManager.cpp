@@ -4,6 +4,7 @@
 #include <random>
 #include "GameManager.h"
 #include "Card.h"
+#include "Hand.h"
 #include "ResourceManager.h"
 #include "UIManager.h"
 
@@ -11,23 +12,76 @@ using namespace std;
 
 void initDeck();
 void shuffleDeck();
-int calculateSum(vector<Card>& cards);
+void dealCards();
+void endRound(GameResult gr);
+void restartGame();
+
+// Additional managers
+UIManager uiManager;
+
+const float deskX{ 1070.0f };
+const float deskY{ 75.0f };
 
 vector<Card> deck;
 
-vector<Card> playerCards;
-vector<Card> dealerCards;
+// There are possible max 9 cards in hand wihtout going over 21
+const Position playerCardsPositions[]
+{
+	{535.0f, 400.0f},
+	{570.0f, 400.0f},
+	{605.0f, 400.0f},
+	{640.0f, 400.0f},
+	{675.0f, 400.0f},
+	{710.0f, 400.0f},
+	{745.0f, 400.0f},
+	{780.0f, 400.0f},
+	{815.0f, 400.0f},
+};
 
-SDL_Renderer* GameManager::renderer = nullptr;
+const Position dealerCardsPositions[]
+{
+	{535.0f, 75.0f},
+	{570.0f, 75.0f},
+	{605.0f, 75.0f},
+	{640.0f, 75.0f},
+	{675.0f, 75.0f},
+	{710.0f, 75.0f},
+	{745.0f, 75.0f},
+	{780.0f, 75.0f},
+	{815.0f, 75.0f},
+};
 
-void GameManager::init(const char* title, int xPos, int yPos, int width, int height)
+Hand player;
+Hand dealer;
+
+// Counts how many cards we created for the player and the dealer
+int playerCount{};
+int dealerCount{};
+
+int playerSum{};
+int dealerSum{};
+
+// At the start assume the player has 500 dollars
+int playerCash{500};
+
+// Assume all time we have the same bet 5 dollars
+int playerBet{ 5 };
+
+// Register our custom events
+Uint32 ROUND_END = SDL_RegisterEvents(1);
+Uint32 CARDS_RETURN = SDL_RegisterEvents(1);
+Uint32 GAME_END = SDL_RegisterEvents(1);
+
+SDL_Renderer* GameManager::renderer{ nullptr };
+
+void GameManager::init(const char* title, int x, int y, int width, int height)
 {
 	if (SDL_Init(SDL_INIT_EVERYTHING) == 0)
 	{
 		cout << "Subsystems initialized\n";
 
 		//Create a window
-		window = SDL_CreateWindow(title, xPos, yPos, width, height, SDL_WINDOW_OPENGL);
+		window = SDL_CreateWindow(title, x, y, width, height, SDL_WINDOW_OPENGL);
 
 		if (window)
 			cout << "Window created\n";
@@ -38,17 +92,22 @@ void GameManager::init(const char* title, int xPos, int yPos, int width, int hei
 		if (renderer)
 		{
 			SDL_SetRenderDrawColor(renderer, 0, 127, 0, SDL_ALPHA_OPAQUE);
+
 			cout << "Renderer created\n";
 		}
 
+		// Init managers
+
+		uiManager.init(this);
+
+		//..............
+
 		initDeck();
 		shuffleDeck();
+		dealCards();
 
-		// Call each function twice because we have two cards at the start for the player and the dealer
-		givePlayerCard();
-		givePlayerCard();
-		giveDealerCard();
-		giveDealerCard();
+		uiManager.setPlayerBet(to_string(playerBet));
+		uiManager.setPlayerCash(to_string(playerCash));
 
 		isRunning = true;
 	}
@@ -56,19 +115,34 @@ void GameManager::init(const char* title, int xPos, int yPos, int width, int hei
 		isRunning = false;
 }
 
-void GameManager::handleEvents(UIManager& uiManager)
+void GameManager::handleEvents()
 {
 	SDL_Event event;
 
 	SDL_PollEvent(&event);
 
-	uiManager.handleEvents(*this, event);
+	// Handle managers
+
+	uiManager.handleEvents(event);
 
 	switch (event.type)
 	{
 	case SDL_QUIT:
 		isRunning = false;
 		break;
+	}
+
+	if (event.type == ROUND_END)
+	{
+		restartGame();
+	}
+	else if (event.type == CARDS_RETURN)
+	{
+		dealCards();
+	}
+	else if (event.type == GAME_END)
+	{
+		isRunning = false;
 	}
 }
 
@@ -78,28 +152,30 @@ void GameManager::update()
 	for (auto& card : deck)
 		card.update();
 
-	// Update player hand and dealer hand
+	player.update();
+	dealer.update();
 
-	for (auto& card : playerCards)
-		card.update();
+	//Update managers
 
-	for (auto& card : dealerCards)
-		card.update();
+	uiManager.update();
 }
 
 void GameManager::render()
 {
+	SDL_RenderClear(GameManager::renderer);
+
 	// Render the deck
 	for (auto& card : deck)
 		card.render();
 
-	// Render player hand and dealer hand
+	player.render();
+	dealer.render();
 
-	for (auto& card : playerCards)
-		card.render();
+	// Render managers
 
-	for (auto& card : dealerCards)
-		card.render();
+	uiManager.render();
+
+	SDL_RenderPresent(GameManager::renderer);
 }
 
 void GameManager::cleanup()
@@ -112,76 +188,54 @@ void GameManager::cleanup()
 	cout << "Game cleaned\n";
 }
 
-void GameManager::givePlayerCard()
+void GameManager::onHitPressed()
 {
-	// There are possible max 9 cards in hand wihtout going over 21
-	const pair<float, float> playerPositions[]
+	player.addCard(deck, playerCardsPositions[playerCount], true);
+	++playerCount;
+
+	playerSum = player.calculateSum();
+	uiManager.setPlayerSum(to_string(playerSum));
+
+	if (playerSum > 21)
 	{
-		{535.0f, 400.0f},
-		{570.0f, 400.0f},
-		{605.0f, 400.0f},
-		{640.0f, 400.0f},
-		{675.0f, 400.0f},
-		{710.0f, 400.0f},
-		{745.0f, 400.0f},
-		{780.0f, 400.0f},
-		{815.0f, 400.0f},
-	};
-
-	static unsigned count = 0; // Count how many cards we created
-
-	// Here we use move semantics because after pop_back() the card will be destroyed from the deck
-
-	Card* playerCard = &deck.back();
-	playerCard->setPosition(playerPositions[count].first, playerPositions[count].second);
-	playerCard->flip();
-	playerCards.push_back(move(*playerCard));
-	deck.pop_back();
-
-	++count;
-
-	//calculateSum(playerCards);
+		endRound(GameResult::playerLose);
+	}
 }
 
-void GameManager::giveDealerCard()
+void GameManager::onStandPressed()
 {
-	const pair<float, float> dealerPositions[]
+	// Show the second card of the dealer
+
+	dealer.showCard(1);
+
+	while (dealerSum < 17)
 	{
-		{535.0f, 75.0f},
-		{570.0f, 75.0f},
-		{605.0f, 75.0f},
-		{640.0f, 75.0f},
-		{675.0f, 75.0f},
-		{710.0f, 75.0f},
-		{745.0f, 75.0f},
-		{780.0f, 75.0f},
-		{815.0f, 75.0f},
-	};
+		dealer.addCard(deck, dealerCardsPositions[dealerCount], true);
+		++dealerCount;
 
-	static unsigned count = 0;
+		dealerSum = dealer.calculateSum();
+	}
 
-	Card* dealerCard = &deck.back();
-	dealerCard->setPosition(dealerPositions[count].first, dealerPositions[count].second);
+	uiManager.setDealerSum(to_string(dealerSum));
 
-	// The second card must be face down
-	if (count != 1)
-		dealerCard->flip();
+	if (dealerSum > 21)
+	{
+		endRound(GameResult::playerWin);
+		return;
+	}
 
-	dealerCards.push_back(move(*dealerCard));
-	deck.pop_back();
-
-	++count;
-
-	//calculateSum(dealerCards);
+	if (playerSum > dealerSum)
+		endRound(GameResult::playerWin);
+	if (playerSum < dealerSum)
+		endRound(GameResult::playerLose);
+	else if (playerSum == dealerSum)
+		endRound(GameResult::draw);
 }
 
 void initDeck()
 {
-	const float deskX{ 1070.0f };
-	const float deskY{ 75.0f };
-
-	const float cardWidth{ 140.0f };
-	const float cardHeight{ 190.0f };
+	const int cardWidth{ 140 };
+	const int cardHeight{ 190 };
 
 	const string cardsNames[13][4] = {
 		{"2C", "2D", "2H", "2S"},
@@ -207,12 +261,13 @@ void initDeck()
 
 			int cardValue{};
 
-			if (i != 9)
+			if (i < 9)
 				cardValue = i + 2; // Card values from 2 to 10, where 10 is represented by 't'
 			else
 				cardValue = 10; // Jack, Queen, King and Ace (temprorary) are all worth 10 points
 
-			deck.push_back({ deskX, deskY, cardWidth, cardHeight, texturePath, cardValue,});
+			// Aces have first index equals 12, that is, they are last in the array
+			deck.push_back({ deskX, deskY, cardWidth, cardHeight, texturePath, cardValue, i == 12});
 		}
 	}
 }	
@@ -225,22 +280,114 @@ void shuffleDeck()
 	shuffle(deck.begin(), deck.end(), g);
 }
 
-//int calculateSum(vector<Card>& cards)
-//{
-//	static int playerSum = 0;
-//	static int dealerSum = 0;
-//
-//	if (cards == playerCards)
-//	{
-//		playerSum += playerCards.back().getValue();
-//
-//		return playerSum;
-//	}
-//	else
-//	{
-//		dealerSum += dealerCards.back().getValue();
-//
-//		return dealerSum;
-//	}
-//}
+void dealCards()
+{
+	// The dealer and the player have 2 cards at the start
+	const int numCards{ 2 };
 
+	for (; playerCount < numCards; ++playerCount)
+	{
+		player.addCard(deck, playerCardsPositions[playerCount], true);
+	}
+
+	for (; dealerCount < numCards; ++dealerCount)
+	{
+		// We hide the second card
+
+		if (dealerCount == 1)
+			dealer.addCard(deck, dealerCardsPositions[dealerCount], false);
+		else
+			dealer.addCard(deck, dealerCardsPositions[dealerCount], true);
+	}
+
+	playerSum = player.calculateSum();
+	uiManager.setPlayerSum(to_string(playerSum));
+
+	dealerSum = dealer.calculateSum();
+	uiManager.setDealerSum(to_string(dealerSum));
+}
+
+void endRound(GameResult gr)
+{
+	switch (gr)
+	{
+	case GameResult::playerLose:
+
+		uiManager.setFinishText("You lose");
+
+		playerCash -= playerBet;
+
+		if (playerCash < 0)
+		{
+			SDL_AddTimer
+			(3000,
+				[](Uint32 interval, void* param)->Uint32
+				{
+					SDL_Event event;
+					event.type = GAME_END;
+					SDL_PushEvent(&event);
+					return 0;
+				},
+				nullptr
+				);
+		}
+
+		break;
+
+	case GameResult::playerWin:
+
+		uiManager.setFinishText("You win");
+
+		playerCash += playerBet;
+
+		break;
+
+	case GameResult::draw:
+
+		uiManager.setFinishText("Draw");
+
+		break;
+	}
+
+	uiManager.setPlayerCash(to_string(playerCash));
+
+	SDL_AddTimer
+	(3000,
+		[](Uint32 interval, void* param)->Uint32
+		{
+			SDL_Event event;
+			event.type = ROUND_END;
+			SDL_PushEvent(&event);
+			return 0;
+		},
+		nullptr
+		);
+}
+
+void restartGame()
+{
+	player.removeCards(deck, { deskX, deskY });
+	dealer.removeCards(deck, { deskX, deskY });
+
+	player.reset();
+	dealer.reset();
+
+	shuffleDeck();
+
+	playerCount = 0;
+	dealerCount = 0;
+
+	uiManager.setFinishText("");
+
+	SDL_AddTimer
+	(2000,
+		[](Uint32 interval, void* param)->Uint32
+		{
+			SDL_Event event;
+			event.type = CARDS_RETURN;
+			SDL_PushEvent(&event);
+			return 0;
+		},
+		nullptr
+	);
+}

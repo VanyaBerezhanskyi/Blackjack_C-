@@ -20,7 +20,7 @@ SDL_Texture* ResourceManager::getTexture(const char* filePath)
 	{
 		SDL_Surface* surface = IMG_Load(filePath);
 
-		if(surface == nullptr)
+		if (surface == nullptr)
 		{
 			cout << "Failed to load image\n";
 			return nullptr;
@@ -34,7 +34,7 @@ SDL_Texture* ResourceManager::getTexture(const char* filePath)
 	return textures[filePath];
 }
 
-SDL_Texture* ResourceManager::getTexture(const char* filePath, unsigned fontSize, string text, SDL_Color color)
+SDL_Texture* ResourceManager::getTexture(const char* filePath, const int fontSize, const string text, const SDL_Color color)
 {
 	TTF_Font* font = TTF_OpenFont(filePath, fontSize);
 

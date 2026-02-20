@@ -7,52 +7,60 @@
 using namespace std;
 
 // Our text objects
+// And here we might create for example a vector for our text objects, but I want to have access to specific objects
 Text playerSum;
 Text dealerSum;
-Text playerMoney;
-Text dealerMoney;
+Text playerBet;
+Text playerCash;
 Text hitButton;
 Text standButton;
+Text finishText;
 
-void UIManager::init()
+void UIManager::init(GameManager* gm)
 {
+	gameManager = gm;
+
 	// Init data for our text objects
 
-	constexpr unsigned numTexts{ 6 }; // Number of text objects we want to create
+	constexpr int numTexts{ 7 }; // Number of text objects we want to create
 
-	const pair<float, float> textPositions[numTexts] 
+	const Position textPositions[numTexts] 
 	{
-		{300.0f, 400.0f}, 
-		{300.0f, 75.0f},
-		{50.0f, 400.0f},
-		{50.0f, 75.0f},
-		{1100.0f, 350.0f},
-		{1090.0f, 500.0f}
+		{350.0f, 420.0f}, 
+		{350.0f, 120.0f},
+		{90.0f, 350.0f},
+		{90.0f, 630.0f},
+		{1040.0f, 350.0f},
+		{1040.0f, 500.0f},
+		{90.0f, 50.0f}
 	};
 
-	const pair<float, float> textSizes[numTexts]
+	const pair<int, int> textSizes[numTexts]
 	{
-		{100.0f, 50.0f},
-		{100.0f, 50.0f},
-		{100.0f, 50.0f},
-		{100.0f, 50.0f},
-		{75.0f, 75.0f},
-		{100.0f, 100.0f}
+		{80, 50},
+		{80, 50},
+		{80, 50},
+		{165, 50},
+		{220, 90},
+		{220, 90},
+		{165, 90}
 	};
 
-	const unsigned fontSizes[numTexts]
+	const int fontSizes[numTexts]
 	{
-		24,
-		24,
-		24,
-		24,
-		24,
-		24
+		34,
+		34,
+		28,
+		26,
+		32,
+		32,
+		48
 	};
 
 	// All elements of this array are equal, but we might want to specify different colors for different text objects
 	const SDL_Color textColors[numTexts]
 	{
+		{255, 255, 255, SDL_ALPHA_OPAQUE},
 		{255, 255, 255, SDL_ALPHA_OPAQUE},
 		{255, 255, 255, SDL_ALPHA_OPAQUE},
 		{255, 255, 255, SDL_ALPHA_OPAQUE},
@@ -65,99 +73,112 @@ void UIManager::init()
 	{
 		"Sum: ",
 		"Sum: ",
-		"$5.00",
-		"$5.00",
+		"$",
+		"Cash: ",
 		"Hit",
-		"Stand"
+		"Stand",
+		""
 	};
 
 	playerSum =
 	{
-		textPositions[0].first,
-		textPositions[0].second,
+		textPositions[0].x,
+		textPositions[0].y,
 		textSizes[0].first,
 		textSizes[0].second,
 		fontSizes[0],
-		textColors[0],
-		textContents[0]
+		textContents[0],
+		textColors[0]
 	};
 
 	dealerSum =
 	{
-		textPositions[1].first,
-		textPositions[1].second,
+		textPositions[1].x,
+		textPositions[1].y,
 		textSizes[1].first,
 		textSizes[1].second,
 		fontSizes[1],
-		textColors[1],
-		textContents[1]
+		textContents[1],
+		textColors[1]
 	};
 
-	playerMoney =
+	playerBet =
 	{
-		textPositions[2].first,
-		textPositions[2].second,
+		textPositions[2].x,
+		textPositions[2].y,
 		textSizes[2].first,
 		textSizes[2].second,
 		fontSizes[2],
-		textColors[2],
-		textContents[2]
+		textContents[2],
+		textColors[2]
 	};
 
-	dealerMoney =
+	playerCash =
 	{
-		textPositions[3].first,
-		textPositions[3].second,
+		textPositions[3].x,
+		textPositions[3].y,
 		textSizes[3].first,
 		textSizes[3].second,
 		fontSizes[3],
-		textColors[3],
-		textContents[3]
+		textContents[3],
+		textColors[3]
 	};
 
 	hitButton =
 	{
-		textPositions[4].first,
-		textPositions[4].second,
+		textPositions[4].x,
+		textPositions[4].y,
 		textSizes[4].first,
 		textSizes[4].second,
 		fontSizes[4],
-		textColors[4],
-		textContents[4]
+		textContents[4],
+		textColors[4]
 	};
 
 	standButton =
 	{
-		textPositions[5].first,
-		textPositions[5].second,
+		textPositions[5].x,
+		textPositions[5].y,
 		textSizes[5].first,
 		textSizes[5].second,
 		fontSizes[5],
-		textColors[5],
-		textContents[5]
+		textContents[5],
+		textColors[5]
+	};
+
+	finishText =
+	{
+		textPositions[6].x,
+		textPositions[6].y,
+		textSizes[6].first,
+		textSizes[6].second,
+		fontSizes[6],
+		textContents[6],
+		textColors[6]
 	};
 }
 
-void UIManager::handleEvents(GameManager& gameManager, SDL_Event& event)
+void UIManager::handleEvents(SDL_Event& event)
 {
 	switch (event.type)
 	{
 	case SDL_MOUSEBUTTONDOWN:
 
-		// Check if we pressed on button (in our case there are hit and stand)
+		// Check if we clicked on button (in our case there are hit and stand)
 
 		int mouseX = event.button.x;
 		int mouseY = event.button.y;
 		
 		// Checking first if we clicked on hit button
 
-		auto [hitX, hitY] = hitButton.getPosition(); // Use structed binding as convenient way of decomposition
+		// Use structed binding as convenient way of decomposition
+		auto [hitX, hitY] = hitButton.getPosition();
 
 		auto [hitWidth, hitHeight] = hitButton.getSize();
 
 		if (mouseX >= hitX && mouseX <= hitX + hitWidth && mouseY >= hitY && mouseY <= hitY + hitHeight)
 		{
-			gameManager.givePlayerCard();
+			gameManager->onHitPressed();
 		}
 
 		// Now checking if we clicked on stand button
@@ -168,7 +189,7 @@ void UIManager::handleEvents(GameManager& gameManager, SDL_Event& event)
 
 		if (mouseX >= standX && mouseX <= standX + standWidth && mouseY >= standY && mouseY <= standY + standHeight)
 		{
-			gameManager.giveDealerCard();
+			gameManager->onStandPressed();
 		}
 
 		break;
@@ -179,18 +200,45 @@ void UIManager::update()
 {
 	playerSum.update();
 	dealerSum.update();
-	playerMoney.update();
-	dealerMoney.update();
+	playerBet.update();
+	playerCash.update();
 	hitButton.update();
 	standButton.update();
+	finishText.update();
 }
 
 void UIManager::render()
 {
 	playerSum.render();
 	dealerSum.render();
-	playerMoney.render();
-	dealerMoney.render();
+	playerBet.render();
+	playerCash.render();
 	hitButton.render();
 	standButton.render();
+	finishText.render();
+}
+
+void UIManager::setPlayerSum(const string sum)
+{
+	playerSum.setText("Sum: " + sum);
+}
+
+void UIManager::setDealerSum(const string sum)
+{
+	dealerSum.setText("Sum: " + sum);
+}
+
+void UIManager::setPlayerBet(const string bet)
+{
+	playerBet.setText("$" + bet);
+}
+
+void UIManager::setPlayerCash(const string cash)
+{
+	playerCash.setText("Cash: " + cash);
+}
+
+void UIManager::setFinishText(const string t)
+{
+	finishText.setText(t);
 }

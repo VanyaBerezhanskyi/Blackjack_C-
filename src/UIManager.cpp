@@ -2,7 +2,8 @@
 #include <SDL.h>
 #include "UIManager.h"
 #include "Text.h"
-#include "GameManager.h"
+#include "Events.h"
+#include "Messenger.h"
 
 using namespace std;
 
@@ -16,10 +17,16 @@ Text hitButton;
 Text standButton;
 Text finishText;
 
-void UIManager::init(GameManager* gm)
-{
-	gameManager = gm;
+void setPlayerSum(const string sum) { playerSum.setText(sum); }
+void setDealerSum(const string sum) { dealerSum.setText(sum); }
 
+void setPlayerBet(const string bet) { playerBet.setText(bet); }
+void setPlayerCash(const string cash) { playerCash.setText(cash); }
+
+void setFinishText(const string t) { finishText.setText(t); }
+
+void UIManager::init()
+{
 	// Init data for our text objects
 
 	constexpr int numTexts{ 7 }; // Number of text objects we want to create
@@ -168,7 +175,7 @@ void UIManager::handleEvents(SDL_Event& event)
 
 		int mouseX = event.button.x;
 		int mouseY = event.button.y;
-		
+
 		// Checking first if we clicked on hit button
 
 		// Use structed binding as convenient way of decomposition
@@ -178,7 +185,7 @@ void UIManager::handleEvents(SDL_Event& event)
 
 		if (mouseX >= hitX && mouseX <= hitX + hitWidth && mouseY >= hitY && mouseY <= hitY + hitHeight)
 		{
-			gameManager->onHitPressed();
+			Messenger::getInstance().broadcastEvent(HIT_BUTTON_PRESSED);
 		}
 
 		// Now checking if we clicked on stand button
@@ -189,10 +196,43 @@ void UIManager::handleEvents(SDL_Event& event)
 
 		if (mouseX >= standX && mouseX <= standX + standWidth && mouseY >= standY && mouseY <= standY + standHeight)
 		{
-			gameManager->onStandPressed();
+			Messenger::getInstance().broadcastEvent(STAND_BUTTON_PRESSED);
 		}
 
 		break;
+	}
+
+	if (event.type == GAME_STARTED)
+	{
+		// Since here we use void*, we need to cast it to the type we need
+		setPlayerBet("$" + to_string(*static_cast<int*>(event.user.data1)));
+		setPlayerCash("Cash: $" + to_string(*static_cast<int*>(event.user.data2)));
+	}
+	else if (event.type == PLAYER_SUM_UPDATED)
+	{
+		setPlayerSum("Sum: " + to_string(*static_cast<int*>(event.user.data1)));
+	}
+	else if (event.type == DEALER_SUM_UPDATED)
+	{
+		setDealerSum("Sum: " + to_string(*static_cast<int*>(event.user.data1)));
+	}
+	else if (event.type == PLAYER_WIN)
+	{
+		setFinishText("You win!");
+		setPlayerCash("Cash: $" + to_string(*static_cast<int*>(event.user.data1)));
+	}
+	else if (event.type == PLAYER_LOSE)
+	{
+		setFinishText("You lose!");
+		setPlayerCash("Cash: $" + to_string(*static_cast<int*>(event.user.data1)));
+	}
+	else if (event.type == DRAW)
+	{
+		setFinishText("Draw!");
+	}
+	else if (event.type == ROUND_ENDED)
+	{
+		setFinishText("");
 	}
 }
 
@@ -216,29 +256,4 @@ void UIManager::render()
 	hitButton.render();
 	standButton.render();
 	finishText.render();
-}
-
-void UIManager::setPlayerSum(const string sum)
-{
-	playerSum.setText("Sum: " + sum);
-}
-
-void UIManager::setDealerSum(const string sum)
-{
-	dealerSum.setText("Sum: " + sum);
-}
-
-void UIManager::setPlayerBet(const string bet)
-{
-	playerBet.setText("$" + bet);
-}
-
-void UIManager::setPlayerCash(const string cash)
-{
-	playerCash.setText("Cash: " + cash);
-}
-
-void UIManager::setFinishText(const string t)
-{
-	finishText.setText(t);
 }

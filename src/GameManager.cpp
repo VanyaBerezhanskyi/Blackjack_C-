@@ -6,18 +6,26 @@
 #include "Card.h"
 #include "Hand.h"
 #include "ResourceManager.h"
+#include "Events.h"
+#include "Messenger.h"
 #include "UIManager.h"
 
 using namespace std;
 
+enum class GameResult
+{
+	playerWin,
+	playerLose,
+	draw
+};
+
 void initDeck();
 void shuffleDeck();
 void dealCards();
+void onHitButtonPressed();
+void onStandButtonPressed();
 void endRound(GameResult gr);
 void restartGame();
-
-// Additional managers
-UIManager uiManager;
 
 const float deskX{ 1070.0f };
 const float deskY{ 75.0f };
@@ -67,11 +75,6 @@ int playerCash{500};
 // Assume all time we have the same bet 5 dollars
 int playerBet{ 5 };
 
-// Register our custom events
-Uint32 ROUND_END = SDL_RegisterEvents(1);
-Uint32 CARDS_RETURN = SDL_RegisterEvents(1);
-Uint32 GAME_END = SDL_RegisterEvents(1);
-
 SDL_Renderer* GameManager::renderer{ nullptr };
 
 void GameManager::init(const char* title, int x, int y, int width, int height)
@@ -96,18 +99,11 @@ void GameManager::init(const char* title, int x, int y, int width, int height)
 			cout << "Renderer created\n";
 		}
 
-		// Init managers
-
-		uiManager.init(this);
-
-		//..............
-
 		initDeck();
 		shuffleDeck();
 		dealCards();
 
-		uiManager.setPlayerBet(to_string(playerBet));
-		uiManager.setPlayerCash(to_string(playerCash));
+		Messenger::getInstance().broadcastEvent(GAME_STARTED, &playerBet, &playerCash);
 
 		isRunning = true;
 	}
@@ -115,16 +111,8 @@ void GameManager::init(const char* title, int x, int y, int width, int height)
 		isRunning = false;
 }
 
-void GameManager::handleEvents()
+void GameManager::handleEvents(SDL_Event& event)
 {
-	SDL_Event event;
-
-	SDL_PollEvent(&event);
-
-	// Handle managers
-
-	uiManager.handleEvents(event);
-
 	switch (event.type)
 	{
 	case SDL_QUIT:
@@ -132,15 +120,24 @@ void GameManager::handleEvents()
 		break;
 	}
 
-	if (event.type == ROUND_END)
+	// Here we use if statements instead of switch because our custom events are not constant expressions
+	if (event.type == HIT_BUTTON_PRESSED)
+	{
+		onHitButtonPressed();
+	}
+	else if (event.type == STAND_BUTTON_PRESSED)
+	{
+		onStandButtonPressed();
+	}
+	else if (event.type == ROUND_ENDED)
 	{
 		restartGame();
 	}
-	else if (event.type == CARDS_RETURN)
+	else if (event.type == CARDS_RETURNED)
 	{
 		dealCards();
 	}
-	else if (event.type == GAME_END)
+	else if (event.type == GAME_ENDED)
 	{
 		isRunning = false;
 	}
@@ -154,28 +151,16 @@ void GameManager::update()
 
 	player.update();
 	dealer.update();
-
-	//Update managers
-
-	uiManager.update();
 }
 
 void GameManager::render()
 {
-	SDL_RenderClear(GameManager::renderer);
-
 	// Render the deck
 	for (auto& card : deck)
 		card.render();
 
 	player.render();
 	dealer.render();
-
-	// Render managers
-
-	uiManager.render();
-
-	SDL_RenderPresent(GameManager::renderer);
 }
 
 void GameManager::cleanup()
@@ -188,21 +173,22 @@ void GameManager::cleanup()
 	cout << "Game cleaned\n";
 }
 
-void GameManager::onHitPressed()
+void onHitButtonPressed()
 {
 	player.addCard(deck, playerCardsPositions[playerCount], true);
 	++playerCount;
 
 	playerSum = player.calculateSum();
-	uiManager.setPlayerSum(to_string(playerSum));
 
 	if (playerSum > 21)
 	{
 		endRound(GameResult::playerLose);
 	}
+
+	Messenger::getInstance().broadcastEvent(PLAYER_SUM_UPDATED, &playerSum);
 }
 
-void GameManager::onStandPressed()
+void onStandButtonPressed()
 {
 	// Show the second card of the dealer
 
@@ -216,11 +202,12 @@ void GameManager::onStandPressed()
 		dealerSum = dealer.calculateSum();
 	}
 
-	uiManager.setDealerSum(to_string(dealerSum));
+	Messenger::getInstance().broadcastEvent(DEALER_SUM_UPDATED, &dealerSum);
 
 	if (dealerSum > 21)
 	{
 		endRound(GameResult::playerWin);
+
 		return;
 	}
 
@@ -301,10 +288,10 @@ void dealCards()
 	}
 
 	playerSum = player.calculateSum();
-	uiManager.setPlayerSum(to_string(playerSum));
-
 	dealerSum = dealer.calculateSum();
-	uiManager.setDealerSum(to_string(dealerSum));
+
+	Messenger::getInstance().broadcastEvent(PLAYER_SUM_UPDATED, &playerSum);
+	Messenger::getInstance().broadcastEvent(DEALER_SUM_UPDATED, &dealerSum);
 }
 
 void endRound(GameResult gr)
@@ -313,9 +300,9 @@ void endRound(GameResult gr)
 	{
 	case GameResult::playerLose:
 
-		uiManager.setFinishText("You lose");
-
 		playerCash -= playerBet;
+
+		Messenger::getInstance().broadcastEvent(PLAYER_LOSE, &playerCash);
 
 		if (playerCash < 0)
 		{
@@ -323,9 +310,7 @@ void endRound(GameResult gr)
 			(3000,
 				[](Uint32 interval, void* param)->Uint32
 				{
-					SDL_Event event;
-					event.type = GAME_END;
-					SDL_PushEvent(&event);
+					Messenger::getInstance().broadcastEvent(GAME_ENDED);
 					return 0;
 				},
 				nullptr
@@ -336,28 +321,24 @@ void endRound(GameResult gr)
 
 	case GameResult::playerWin:
 
-		uiManager.setFinishText("You win");
-
 		playerCash += playerBet;
+
+		Messenger::getInstance().broadcastEvent(PLAYER_WIN, &playerCash);
 
 		break;
 
 	case GameResult::draw:
 
-		uiManager.setFinishText("Draw");
+		Messenger::getInstance().broadcastEvent(DRAW);
 
 		break;
 	}
-
-	uiManager.setPlayerCash(to_string(playerCash));
 
 	SDL_AddTimer
 	(3000,
 		[](Uint32 interval, void* param)->Uint32
 		{
-			SDL_Event event;
-			event.type = ROUND_END;
-			SDL_PushEvent(&event);
+			Messenger::getInstance().broadcastEvent(ROUND_ENDED);
 			return 0;
 		},
 		nullptr
@@ -377,15 +358,11 @@ void restartGame()
 	playerCount = 0;
 	dealerCount = 0;
 
-	uiManager.setFinishText("");
-
 	SDL_AddTimer
 	(2000,
 		[](Uint32 interval, void* param)->Uint32
 		{
-			SDL_Event event;
-			event.type = CARDS_RETURN;
-			SDL_PushEvent(&event);
+			Messenger::getInstance().broadcastEvent(CARDS_RETURNED);
 			return 0;
 		},
 		nullptr

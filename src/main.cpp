@@ -1,6 +1,7 @@
 #include "SDL.h"	
 #include "GameManager.h"
 #include "UIManager.h"
+#include "AudioManager.h"
 
 int main(int argc, char* argv[])
 {
@@ -11,9 +12,11 @@ int main(int argc, char* argv[])
 
 	GameManager gameManager;
 	UIManager uiManager;
+	AudioManager audioManager;
 
 	gameManager.init("Blackjack", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width, height);
 	uiManager.init();
+	audioManager.init();
 
 	while (gameManager.running())
 	{
@@ -26,10 +29,12 @@ int main(int argc, char* argv[])
 		{
 			gameManager.handleEvents(event);
 			uiManager.handleEvents(event);
+			audioManager.handleEvents(event);
 		}
 
 		gameManager.update();
 		uiManager.update();
+		audioManager.update();
 
 		SDL_RenderClear(GameManager::renderer);
 		gameManager.render();

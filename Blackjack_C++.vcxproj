@@ -71,11 +71,11 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>C:\Users\vanec\Blackjack_C++\include\SDL2_ttf;$(ProjectDir)include\SDL2_image;$(ProjectDir)include;$(ProjectDir)include\SDL2;$(IncludePath)</IncludePath>
+    <IncludePath>C:\Users\vanec\Blackjack_C++\include\SDL2_ttf;$(ProjectDir)include\SDL2_image;$(ProjectDir)include;$(ProjectDir)include\SDL2_mixer;$(ProjectDir)include\SDL2;$(IncludePath)</IncludePath>
     <LibraryPath>$(ProjectDir)lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>C:\Users\vanec\Blackjack_C++\include\SDL2_ttf;$(ProjectDir)include\SDL2_image;$(ProjectDir)include;$(ProjectDir)include\SDL2;$(IncludePath)</IncludePath>
+    <IncludePath>C:\Users\vanec\Blackjack_C++\include\SDL2_ttf;$(ProjectDir)include\SDL2_image;$(ProjectDir)include;$(ProjectDir)include\SDL2_mixer;$(ProjectDir)include\SDL2;$(IncludePath)</IncludePath>
     <LibraryPath>$(ProjectDir)lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -115,7 +115,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>SDL2.lib;SDL2main.lib;SDL2_image.lib;opengl32.lib;SDL2_ttf.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>SDL2.lib;SDL2main.lib;SDL2_image.lib;opengl32.lib;SDL2_ttf.lib;SDL2_mixer.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>C:\Users\vanec\Blackjack_C++\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
@@ -132,25 +132,33 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>SDL2.lib;SDL2main.lib;SDL2_image.lib;opengl32.lib;SDL2_ttf.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>SDL2.lib;SDL2main.lib;SDL2_image.lib;opengl32.lib;SDL2_ttf.lib;SDL2_mixer.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>C:\Users\vanec\Blackjack_C++\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\AudioManager.cpp" />
+    <ClCompile Include="src\Events.cpp" />
     <ClCompile Include="src\GameManager.cpp" />
     <ClCompile Include="src\Card.cpp" />
     <ClCompile Include="src\glad.c" />
     <ClCompile Include="src\Hand.cpp" />
     <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\Messenger.cpp" />
     <ClCompile Include="src\ResourceManager.cpp" />
+    <ClCompile Include="src\Sound.cpp" />
     <ClCompile Include="src\Text.cpp" />
     <ClCompile Include="src\UIManager.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="include\AudioManager.h" />
+    <ClInclude Include="include\Events.h" />
     <ClInclude Include="include\GameManager.h" />
     <ClInclude Include="include\Card.h" />
     <ClInclude Include="include\Hand.h" />
+    <ClInclude Include="include\Messenger.h" />
     <ClInclude Include="include\ResourceManager.h" />
+    <ClInclude Include="include\Sound.h" />
     <ClInclude Include="include\Text.h" />
     <ClInclude Include="include\UIManager.h" />
   </ItemGroup>
